@@ -6,6 +6,7 @@ from controllers import *
 import time
 from global_vars import *
 import random
+from featureExtractors import *
 
 LOOP_INTERVAL = 2.0 / 1000.0
 TRAIN_MODE = 1
