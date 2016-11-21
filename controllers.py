@@ -48,13 +48,13 @@ class baselineController(froggerController):
             down = state[2]
             right = state[3]
             
-            if up == OPEN:
+            if up != TAKEN:
                 return "UP"
                 
             randDir = []    
-            if left == OPEN:
+            if left != TAKEN:
                 randDir.append("LEFT")
-            if right == OPEN:
+            if right != TAKEN:
                 randDir.append("RIGHT")
             if len(randDir) > 0:
                 return randDir[random.randint(0,len(randDir)-1)]

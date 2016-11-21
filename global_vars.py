@@ -3,7 +3,7 @@ import pygame
 BLOCK_SIZE = 20
 fontColor = pygame.Color(0,0,0)
 frogColor = pygame.Color(255,0,255)
-OPEN = 0
+TAKEN = 1
 
 carColor = pygame.Color(255,0,0)
 riverColor = pygame.Color(0,0,255)

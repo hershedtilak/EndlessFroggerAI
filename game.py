@@ -7,8 +7,8 @@ import time
 from global_vars import *
 import random
 
-LOOP_INTERVAL = 10.0 / 1000.0
-TRAIN_MODE = 0
+LOOP_INTERVAL = 2.0 / 1000.0
+TRAIN_MODE = 1
 
 class game:
 
@@ -30,8 +30,8 @@ class game:
         self.buffer = deque([])
         self.player = Frog(int(width/2), int(height-1))
         #self.controller = baselineController()
-        self.controller = humanController()
-        #self.controller = QLearningController(0.9, identityFeatureExtractor, 0.4)
+        #self.controller = humanController()
+        self.controller = QLearningController(0.9, identityFeatureExtractor, 0.4)
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         for i in range(0, self.boardHeight):
             self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
@@ -124,6 +124,8 @@ class game:
                 row.update()
             self.drawGame()
             
+            newState = self.getState()
+            
             if self.playerIsDead():
                 #self.player.x = random.randint(0, self.width-1)
                 #self.player.y = random.randint(int(self.height/2), self.height-1)
@@ -136,17 +138,12 @@ class game:
                 if numCycles % (1.0 / LOOP_INTERVAL) == 0:
                     self.score += 1
                         
-            newState = self.getState()
-            
-            if numCycles % self.controllerUpdateInterval == 0:
+            reward = 0
+            if action == "UP":
                 reward = 1
-                if action == "UP":
-                    reward = 5
-                elif action == "LEFT" or action == "RIGHT":
-                    reward = 2
-                if self.score == 0:
-                    reward = -5000
-                self.controller.incorporateFeedback(oldState, action, reward, newState)
+            if self.score == 0:
+                reward = -5000
+            self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:
                 if save == 1:
