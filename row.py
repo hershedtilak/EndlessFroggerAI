@@ -47,11 +47,15 @@ class Row:
         
     def getSinkCounter(self):
         return self.sinkCounter
-        
+
+    def getType(self):
+        return self.type
+       
+    # returns whether or not the row was updated
     def update(self):
         if self.count != self.interval:
             self.count = self.count + 1
-            return
+            return False
         if not self.buffer:
             self.fillbuffer()
         if self.dir == DIR_LEFT:
@@ -76,6 +80,8 @@ class Row:
                 for i in range(0, self.len):
                     self.rowQ[i] = int(self.rowQ[i] + 0.5)
                 self.sinkingLog = False
+                
+        return True
             
     def fillbuffer(self):
         p = random.randint(0,20)

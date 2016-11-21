@@ -8,8 +8,8 @@ from global_vars import *
 import random
 from feature_extractors import *
 
-LOOP_INTERVAL = 2.0 / 1000.0
 TRAIN_MODE = 1
+HUMAN_CONTROLLER = 0
 
 class game:
 
@@ -20,19 +20,25 @@ class game:
         self.updateInterval = 100
         self.controllerUpdateInterval = 10
         self.rowInterval = 15
+        self.loopInterval = 10.0 / 1000.0
+        self.controllerExplorationRate = 0.0
         if TRAIN_MODE:
             self.updateInterval = 10
             self.controllerUpdateInterval = 1
             self.rowInterval = 1
+            self.loopInterval = 2.0 / 1000.0
+            self.controllerExplorationRate = 0.4
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
         self.board = deque([], self.boardHeight)
         self.buffer = deque([])
         self.player = Frog(int(width/2), int(height-1))
-        #self.controller = baselineController()
-        #self.controller = humanController()
-        self.controller = QLearningController(0.9, safetyFeatureExtractor, 0.4)
+        if HUMAN_CONTROLLER:
+            self.controller = humanController()
+        else:
+            #self.controller = baselineController()
+            self.controller = QLearningController(0.9, safetyFeatureExtractor, self.controllerExplorationRate)
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         for i in range(0, self.boardHeight):
             self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
@@ -57,6 +63,14 @@ class game:
         self.drawScores()
             
     def updateBoard(self):
+        # update rows
+        for i in range(0, self.boardHeight):
+            if self.board[i].update():
+                # player moves with logs
+                if i == (self.height - 1 - self.player.y) and self.board[i].getType() == "RIVER":
+                    shift = 2*(self.board[i].getDir() == DIR_RIGHT) - 1
+                    self.player.x += shift*(self.player.x + shift >= 0 and self.player.x + shift < self.width)
+        # handle board scrolling
         if not self.buffer:
             type = random.randint(0,len(self.rowOptions)-1)
             self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
@@ -109,14 +123,18 @@ class game:
         save = 1
         while self.running:
 
+            # improve responsiveness of human controller
+            if HUMAN_CONTROLLER:
+                self.controller.updateAction()
+        
             if numCycles % self.controllerUpdateInterval == 0:
                 oldState = newState
                 action = self.controller.getAction(oldState)
                 self.performAction(action)
             
+            # update board
             self.updateBoard()
-            for row in self.board:
-                row.update()
+                
             self.drawGame()
             
             newState = self.getState()
@@ -137,7 +155,7 @@ class game:
                 self.score = 0
                 reward = -1000
             else:
-                if numCycles % (1.0 / LOOP_INTERVAL) == 0:
+                if numCycles % (1.0 / self.loopInterval) == 0:
                     self.score += 1
                         
             self.controller.incorporateFeedback(oldState, action, reward, newState)
@@ -151,7 +169,7 @@ class game:
             
             numCycles += 1
             pygame.display.flip()
-            time.sleep (LOOP_INTERVAL);
+            time.sleep (self.loopInterval);
         
 g = game(20,30)
 g.run()

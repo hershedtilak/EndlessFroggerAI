@@ -8,29 +8,33 @@ import os.path
 class froggerController:
     def getAction(self, state): raise NotImplementedError("Override me")
     def incorporateFeedback(self, state, action, reward, newState): pass
-    def loadWeights(self, file_name): pass
-    def saveWeights(self, file_name): pass
+    def loadWeights(self): pass
+    def saveWeights(self): pass
 
 class humanController(froggerController):
 
     def __init__(self):
         self.id = "humanController"
+        self.lastAction = "STAY"
 
-    def getAction(self, state):
+    def updateAction(self):
         pygame.event.pump()
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-            return "LEFT"
+            self.lastAction = "LEFT"
         elif keys[pygame.K_RIGHT]:
-            return "RIGHT"
+            self.lastAction = "RIGHT"
         elif keys[pygame.K_UP]:
-            return "UP"
+            self.lastAction = "UP"
         elif keys[pygame.K_DOWN]:
-            return "DOWN"
+            self.lastAction = "DOWN"
         elif keys[pygame.K_ESCAPE]:
-            return "QUIT"
-        else:
-            return "STAY"
+            self.lastAction = "QUIT"
+ 
+    def getAction(self, state):
+        retVal = self.lastAction
+        self.lastAction = "STAY"
+        return retVal
 
 
 class baselineController(froggerController):
@@ -52,7 +56,7 @@ class baselineController(froggerController):
             
             if up != TAKEN:
                 return "UP"
-                
+            return "STAY"   
             randDir = []    
             if left != TAKEN:
                 randDir.append("LEFT")
