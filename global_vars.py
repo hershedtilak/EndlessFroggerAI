@@ -8,7 +8,8 @@ OPEN = 0
 carColor = pygame.Color(255,0,0)
 riverColor = pygame.Color(0,0,255)
 logColor = pygame.Color(150,110,110)
+sinkingLogColor = pygame.Color(0,0,0)
 roadColor = pygame.Color(150,150,150)
 grassColor = pygame.Color(0,128,0)
 
-GRAPHICS_ON = False
+SINK_WARN_TIME = 3

@@ -9,6 +9,8 @@ WEIGHTS_FILE = 'weights.txt'
 class froggerController:
     def getAction(self, state): raise NotImplementedError("Override me")
     def incorporateFeedback(self, state, action, reward, newState): pass
+    def loadWeights(self, file_name): pass
+    def saveWeights(self, file_name): pass
 
 class humanController(froggerController):
 

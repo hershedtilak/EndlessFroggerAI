@@ -6,6 +6,8 @@ from global_vars import *
 class Row:
     def __init__(self, length, interval, type="SAFE"):
         self.count = 0
+        self.sinkingLog = False
+        self.sinkCounter = 0
         self.interval = (interval * (type == "ROAD")) + (2 * interval * (type == "RIVER"))
         self.len = length
         self.type = type
@@ -15,6 +17,7 @@ class Row:
         
         if type == "RIVER":
             self.oneColor = riverColor
+            self.pointFiveColor = sinkingLogColor
             self.zeroColor = logColor
         elif type == "ROAD":
             self.oneColor = carColor
@@ -25,8 +28,10 @@ class Row:
         
     def drawRow(self, surface, rowNum):
         for col in range(0, self.len):
-            if self.rowQ[col]:
+            if self.rowQ[col] == 1:
                 color = self.oneColor
+            elif self.rowQ[col] == 0.5:
+                color = self.pointFiveColor
             else:
                 color = self.zeroColor
             surface.fill(color, pygame.Rect((col*BLOCK_SIZE, rowNum*BLOCK_SIZE), (BLOCK_SIZE, BLOCK_SIZE)))
@@ -48,15 +53,29 @@ class Row:
         else:
             self.rowQ.appendleft(self.buffer.popleft())
         self.count = 0
+        
+        # sink a log
+        if self.type == "RIVER" and self.sinkingLog == False:
+            index = random.randint(0, self.len-4)
+            if self.rowQ[index] == 0 and self.rowQ[index + 1] == 0 and self.rowQ[index + 2] == 0 and self.rowQ[index + 3] == 0:
+                self.rowQ[index] = 0.5
+                self.rowQ[index + 1] = 0.5
+                self.rowQ[index + 2] = 0.5
+                self.rowQ[index + 3] = 0.5
+                self.sinkingLog = True
+                self.sinkCounter = 0
+        elif self.sinkingLog == True:
+            self.sinkCounter += 1
+            if self.sinkCounter == SINK_WARN_TIME:
+                for i in range(0, self.len):
+                    self.rowQ[i] = int(self.rowQ[i] + 0.5)
+                self.sinkingLog = False
             
     def fillbuffer(self):
         p = random.randint(0,20)
         if p <= (0 * (self.type == "ROAD") + 10 * (self.type == "RIVER")):
-            self.buffer.append(1 * (self.type == "ROAD"))
-            self.buffer.append(1 * (self.type == "ROAD"))
-            self.buffer.append(1 * (self.type == "ROAD"))
-            if self.type == "RIVER":
-                self.buffer.append(1 * (self.type == "ROAD"))
+            self.buffer.extend([1, 1] * (self.type == "ROAD"))
+            self.buffer.extend([0, 0, 0, 0] * (self.type == "RIVER"))
             
         self.buffer.append(1 * (self.type == "RIVER"))
         self.buffer.append(1 * (self.type == "RIVER"))
