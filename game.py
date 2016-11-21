@@ -87,8 +87,8 @@ class game:
         y = self.player.y
         basicState = [self.getBoardValue(x, y-1), self.getBoardValue(x-1, y), self.getBoardValue(x, y+1), self.getBoardValue(x+1, y)]
         advancedState = []
-        for row in range(max(0, y-2), min(self.height, y+2)):
-            advancedState = advancedState + self.board[row].getRow(x, RADIUS)
+        for row in range(max(0, y-1), min(self.height, y+2)):
+            advancedState = advancedState + self.board[row].getRow(x, RADIUS) + [self.board[row].getDir()] + [self.board[row].getSinkCounter()]
         # [UP, LEFT, DOWN, RIGHT, playerX, playerY, board]
         state = basicState + advancedState
         return tuple(state)
@@ -126,6 +126,12 @@ class game:
             
             newState = self.getState()
             
+            reward = 0
+            if action == "UP":
+                reward = 2
+            elif action == "LEFT" or action == "RIGHT":
+                reward = 1
+    
             if self.playerIsDead():
                 #self.player.x = random.randint(0, self.width-1)
                 #self.player.y = random.randint(int(self.height/2), self.height-1)
@@ -134,15 +140,11 @@ class game:
                 #totalScore += self.score
                 #print("AVG SCORE: " + str(totalScore / numCycles))
                 self.score = 0
+                reward = -1000
             else:
                 if numCycles % (1.0 / LOOP_INTERVAL) == 0:
                     self.score += 1
                         
-            reward = 0
-            if action == "UP":
-                reward = 1
-            if self.score == 0:
-                reward = -5000
             self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:

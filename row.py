@@ -42,6 +42,12 @@ class Row:
     def getRow(self, centerX, radius):
         return list(self.rowQ)[max(0, centerX-radius):min(self.len, centerX+radius+1)]
         
+    def getDir(self):
+        return self.dir
+        
+    def getSinkCounter(self):
+        return self.sinkCounter
+        
     def update(self):
         if self.count != self.interval:
             self.count = self.count + 1

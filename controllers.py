@@ -30,6 +30,8 @@ class humanController(froggerController):
                 return "DOWN"
             elif keys[pygame.K_ESCAPE]:
                 return "QUIT"
+            else:
+                return "STAY"
 
 
 class baselineController(froggerController):
@@ -64,7 +66,7 @@ class baselineController(froggerController):
             
 class QLearningController(froggerController):
     def __init__(self, discount, featureExtractor, explorationProb=0.2):
-        self.actions = ["UP", "LEFT", "DOWN", "RIGHT"];
+        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "STAY"];
         self.discount = discount
         self.featureExtractor = featureExtractor
         self.explorationProb = explorationProb
