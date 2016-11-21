@@ -13,3 +13,5 @@ roadColor = pygame.Color(150,150,150)
 grassColor = pygame.Color(0,128,0)
 
 SINK_WARN_TIME = 3
+DIR_LEFT = 0
+DIR_RIGHT = 1

@@ -31,7 +31,7 @@ class game:
         self.player = Frog(int(width/2), int(height-1))
         #self.controller = baselineController()
         #self.controller = humanController()
-        self.controller = QLearningController(0.9, identityFeatureExtractor, 0.4)
+        self.controller = QLearningController(0.9, safetyFeatureExtractor, 0.4)
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         for i in range(0, self.boardHeight):
             self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
@@ -82,16 +82,10 @@ class game:
         return False
     
     def getState(self):
-        RADIUS = 1
         x = self.player.x
         y = self.player.y
         basicState = [self.getBoardValue(x, y-1), self.getBoardValue(x-1, y), self.getBoardValue(x, y+1), self.getBoardValue(x+1, y)]
-        advancedState = []
-        for row in range(max(0, y-1), min(self.height, y+2)):
-            advancedState = advancedState + self.board[row].getRow(x, RADIUS) + [self.board[row].getDir()] + [self.board[row].getSinkCounter()]
-        # [UP, LEFT, DOWN, RIGHT, playerX, playerY, board]
-        state = basicState + advancedState
-        return tuple(state)
+        return tuple((basicState, x, y, self))
     
     def performAction(self, action):
         if action == "LEFT" and self.player.x > 0:
@@ -129,7 +123,7 @@ class game:
             reward = 0
             if action == "UP":
                 reward = 2
-            elif action == "LEFT" or action == "RIGHT":
+            elif action == "LEFT" or action == "RIGHT" or action == "STAY":
                 reward = 1
     
             if self.playerIsDead():
@@ -149,7 +143,7 @@ class game:
             
             if numCycles % 10000 == 1:
                 if save == 1:
-                    self.controller.saveWeights('weights.txt')
+                    self.controller.saveWeights()
                     save = 0
             elif save == 0:
                 save = 1

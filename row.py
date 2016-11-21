@@ -54,7 +54,7 @@ class Row:
             return
         if not self.buffer:
             self.fillbuffer()
-        if self.dir == 0:
+        if self.dir == DIR_LEFT:
             self.rowQ.append(self.buffer.popleft())
         else:
             self.rowQ.appendleft(self.buffer.popleft())
