@@ -39,7 +39,7 @@ class Row:
     def getValue(self, col):
         return self.rowQ[col]
 
-    def getRow(self, centerX, radius):
+    def getValues(self, centerX, radius):
         return list(self.rowQ)[max(0, centerX-radius):min(self.len, centerX+radius+1)]
         
     def getDir(self):

@@ -86,9 +86,17 @@ class game:
     def getBoardValue(self, x, y):
         if x >= 0 and x < self.width and y >= 0 and y < self.height:
             return self.board[self.height - 1 - y].getValue(x)
-        else:
-            return -1
+        return -1
     
+    def getRow(self, y):
+        return self.board[self.height - 1 - y]
+    
+    def getRowDir(self, y):
+        return self.board[self.height - 1 - y].getDir()
+
+    def getRowSinkCounter(self, y):
+        return self.board[self.height - 1 - y].getSinkCounter()  
+            
     def playerIsDead(self):
         if self.player.y >= self.height:
             return True
