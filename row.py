@@ -50,7 +50,11 @@ class Row:
 
     def getType(self):
         return self.type
-       
+     
+    def clearRow(self):
+        for i in range(0, self.len):
+            self.rowQ[i] = 0
+    
     # returns whether or not the row was updated
     def update(self):
         if self.count != self.interval:

@@ -70,7 +70,7 @@ class baselineController(froggerController):
             
 class QLearningController(froggerController):
     def __init__(self, discount, featureExtractor, explorationProb=0.2):
-        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "STAY"];
+        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "STAY"]
         self.weights_file_name = 'weights/weights_' + featureExtractor.__name__ + '_qLearning.txt'
         self.discount = discount
         self.featureExtractor = featureExtractor
@@ -117,7 +117,7 @@ class QLearningController(froggerController):
 
     # Call this function to get the step size to update the weights.z
     def getStepSize(self):
-        return 1.0
+        return 0.1
 
     # We will call this function with (s, a, r, s'), which you should use to update |weights|.
     # Note that if s is a terminal state, then s' will be None.  Remember to check for this.

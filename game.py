@@ -14,8 +14,7 @@ HUMAN_CONTROLLER = 0
 class game:
 
     def __init__(self, width, height):
-        self.score = 0
-        self.count = 0
+        self.justDied = False
         self.forceUpdate = False
         self.updateInterval = 100
         self.controllerUpdateInterval = 10
@@ -31,18 +30,17 @@ class game:
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
-        self.board = deque([], self.boardHeight)
-        self.buffer = deque([])
         self.player = Frog(int(width/2), int(height-1))
         if HUMAN_CONTROLLER:
             self.controller = humanController()
         else:
             #self.controller = baselineController()
-            self.controller = QLearningController(0.9, safetyFeatureExtractor, self.controllerExplorationRate)
+            self.controller = QLearningController(0.8, testFeatureExtractor, self.controllerExplorationRate)
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
-        for i in range(0, self.boardHeight):
-            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-            
+        
+        # initialize game
+        self.startNewGame()
+        
         # for drawing
         self.surf = pygame.display.set_mode((self.width*BLOCK_SIZE, self.height*BLOCK_SIZE), pygame.HWSURFACE)
         pygame.font.init()
@@ -51,6 +49,26 @@ class game:
         # set game to running
         self.running = True
 
+    def startNewGame(self):
+        self.score = 0
+        self.count = 0
+
+        self.player.x = int(self.width / 2)
+        self.player.y = int(self.height - 1)
+        
+        self.board = deque([], self.boardHeight)
+        self.buffer = deque([])
+
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        for i in range(4, self.boardHeight):
+            if i % 2 == 0:
+                type = random.choice(self.rowOptions)
+            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), type))
+
+        
     def drawScores(self):
         score_string = "Score: " + str(self.score)
         scoretext = self.score_font.render(score_string, 1, (0,0,0))
@@ -88,14 +106,16 @@ class game:
             return self.board[self.height - 1 - y].getValue(x)
         return -1
     
-    def getRow(self, y):
+    def boardValueOpen(self, x, y):
+        val = self.getBoardValue(x, y)
+        return (val != TAKEN and val != -1)
+    
+    def getRowFromPlayerCoords(self, y):
         return self.board[self.height - 1 - y]
     
-    def getRowDir(self, y):
-        return self.board[self.height - 1 - y].getDir()
-
-    def getRowSinkCounter(self, y):
-        return self.board[self.height - 1 - y].getSinkCounter()  
+    def getRowInfoFromPlayerCoords(self, y):
+        row = self.getRowFromPlayerCoords(y)
+        return [row.getType(), row.getDir(), row.getSinkCounter()]
             
     def playerIsDead(self):
         if self.player.y >= self.height:
@@ -107,8 +127,8 @@ class game:
     def getState(self):
         x = self.player.x
         y = self.player.y
-        basicState = [self.getBoardValue(x, y-1), self.getBoardValue(x-1, y), self.getBoardValue(x, y+1), self.getBoardValue(x+1, y)]
-        return tuple((basicState, x, y, self))
+        basicState = [self.getBoardValue(x, y-1), self.getBoardValue(x-1, y), self.getBoardValue(x, y+1), self.getBoardValue(x+1, y), self.getBoardValue(x, y)]
+        return tuple((basicState, x, y, self.justDied, self))
     
     def performAction(self, action):
         if action == "LEFT" and self.player.x > 0:
@@ -135,38 +155,39 @@ class game:
             if HUMAN_CONTROLLER:
                 self.controller.updateAction()
         
-            if numCycles % self.controllerUpdateInterval == 0:
+            if numCycles % self.controllerUpdateInterval == 0 or self.justDied == True:
                 oldState = newState
+                if self.justDied == True:
+                    reward = -200
+                    newState = None
+                    if TRAIN_MODE:
+                        self.controller.incorporateFeedback(oldState, action, reward, newState)
+                    self.justDied = False
+                    oldState = self.getState()
                 action = self.controller.getAction(oldState)
                 self.performAction(action)
             
             # update board
             self.updateBoard()
-                
-            self.drawGame()
-            
-            newState = self.getState()
-            
-            reward = 0
-            if action == "UP":
-                reward = 2
-            elif action == "LEFT" or action == "RIGHT" or action == "STAY":
-                reward = 1
-    
+  
             if self.playerIsDead():
-                #self.player.x = random.randint(0, self.width-1)
-                #self.player.y = random.randint(int(self.height/2), self.height-1)
-                self.player.x = int(self.width / 2)
-                self.player.y = int(self.height - 1)
-                #totalScore += self.score
-                #print("AVG SCORE: " + str(totalScore / numCycles))
-                self.score = 0
-                reward = -1000
+                self.justDied = True
+                self.startNewGame()
             else:
                 if numCycles % (1.0 / self.loopInterval) == 0:
                     self.score += 1
-                        
-            self.controller.incorporateFeedback(oldState, action, reward, newState)
+            
+            # draw board
+            self.drawGame()
+            
+            reward = 0
+            if action == "UP":
+                reward = 5
+            elif action == "LEFT" or action == "RIGHT" or action == "STAY":
+                reward = 2
+            newState = self.getState()      
+            if TRAIN_MODE:
+                self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:
                 if save == 1:
