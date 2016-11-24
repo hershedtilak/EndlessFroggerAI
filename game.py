@@ -2,13 +2,14 @@ import pygame
 from collections import deque
 from row import Row
 from frog import Frog
-from controllers import *
+from base_controllers import *
+from advanced_controllers import *
 import time
 from global_vars import *
 import random
 from feature_extractors import *
 
-TRAIN_MODE = 1
+TRAIN_MODE = 0
 HUMAN_CONTROLLER = 0
 
 class game:
@@ -93,7 +94,7 @@ class game:
             type = random.randint(0,len(self.rowOptions)-1)
             self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
             self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
-        if self.count <= (self.updateInterval / max(1, (self.score / 10))) and self.forceUpdate == False:
+        if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 10)))) and self.forceUpdate == False:
             self.count = self.count + 1
             return
         self.board.append(self.buffer.popleft())
@@ -185,7 +186,7 @@ class game:
                 reward = 5
             elif action == "LEFT" or action == "RIGHT" or action == "STAY":
                 reward = 2
-            newState = self.getState()      
+            newState = self.getState()   
             if TRAIN_MODE:
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             

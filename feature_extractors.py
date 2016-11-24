@@ -2,6 +2,8 @@ from global_vars import *
 
 #test
 def testFeatureExtractor(state, action):
+    if state[3]:
+        return [(-10, 1)]
     newState = [1 * (x == 0) for x in state[0][0:4]]
     return [((tuple(newState), action), 1)]
 
