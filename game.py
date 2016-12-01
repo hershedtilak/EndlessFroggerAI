@@ -10,33 +10,29 @@ import random
 from feature_extractors import *
 
 TRAIN_MODE = 1
-HUMAN_CONTROLLER = 0
+EXPLORATION_RATE = TRAIN_MODE * 0.4
+CONTROLLER = QLEARNING_CONTROLLER
+FEATURE_EXTRACTOR = moreInfoFeatureExtractor
 
 class game:
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, controller):
         self.justDied = False
         self.forceUpdate = False
         self.updateInterval = 100
         self.controllerUpdateInterval = 10
         self.rowInterval = 15
         self.loopInterval = 10.0 / 1000.0
-        self.controllerExplorationRate = 0.0
         if TRAIN_MODE:
             self.updateInterval = 10
             self.controllerUpdateInterval = 1
             self.rowInterval = 1
             self.loopInterval = 2.0 / 1000.0
-            self.controllerExplorationRate = 0.4
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
         self.player = Frog(int(width/2), int(height-1))
-        if HUMAN_CONTROLLER:
-            self.controller = humanController()
-        else:
-            #self.controller = baselineController()
-            self.controller = QLearningController(0.8, moreInfoFeatureExtractor, self.controllerExplorationRate)
+        self.controller = controller
         self.controller.loadWeights()
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         
@@ -201,6 +197,18 @@ class game:
             numCycles += 1
             pygame.display.flip()
             time.sleep (self.loopInterval);
-        
-g = game(20,30)
-g.run()
+
+if CONTROLLER == GENETIC_CONTROLLER:
+    controller = geneticAlgorithmController()     
+    # Greg's stuff
+else:          
+    if CONTROLLER == HUMAN_CONTROLLER:
+        controller = humanController()
+    elif CONTROLLER == BASELINE_CONTROLLER:
+        controller = baselineController()
+    elif CONTROLLER == QLEARNING_CONTROLLER:
+        controller = QLearningController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE)  
+    elif CONTROLLER == SARSA_CONTROLLER:
+        controller = SARSAController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE)  
+    g = game(20,30, controller)
+    g.run()
