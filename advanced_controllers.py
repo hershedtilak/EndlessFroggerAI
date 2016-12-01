@@ -17,7 +17,7 @@ class advancedFroggerController(froggerController):
                 f.write(str(i) + ":" + str(self.weights[i]) + "\n")
 
     def loadWeights(self):
-        file_name = 'weights/weights_' + self.featureExtractor.__name__ + '_' + self.id + '.txt'
+        file_name = 'weights/weights_' + self.id + '_' + self.featureExtractor.__name__ + '.txt'
         if os.path.isfile(file_name):
             with open(file_name, "r") as f:
                 for line in f:
@@ -37,7 +37,6 @@ class QLearningController(advancedFroggerController):
         self.featureExtractor = featureExtractor
         self.explorationProb = explorationProb
         self.weights = defaultdict(float)
-        self.loadWeights()
         self.numIters = 0
     
     # Return the Q function associated with the weights and features
@@ -86,7 +85,6 @@ class SARSAController(advancedFroggerController):
         self.featureExtractor = featureExtractor
         self.explorationProb = explorationProb
         self.weights = defaultdict(float)
-        self.loadWeights()
         self.numIters = 0
         self.bufferedAction = None
         
@@ -117,7 +115,7 @@ class SARSAController(advancedFroggerController):
             return max((self.getQ(state, action), action) for action in self.actions)[1]
 
     def getStepSize(self):
-        return 1.0 / math.sqrt(self.numIters)
+        #return 1.0 / math.sqrt(self.numIters)
         return 0.1
 
     # Update weights

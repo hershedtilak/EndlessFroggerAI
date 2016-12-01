@@ -98,12 +98,21 @@ def moreInfoFeatureExtractor(state, action):
     justDied = state[3]
     game = state[4]
 
-    RADIUS = 1
-    advancedState = []
-    for row in range(max(0, y-1), min(game.height, y+2)):
-        advancedState = advancedState + game.getRow(row).getValues(x, RADIUS) + [game.getRowDir(row)] + [game.getRowSinkCounter(row)]
+    if(justDied):
+        return [(-10, 1)]
     
-    # [UP, LEFT, DOWN, RIGHT, playerX, playerY, board]
-    featureKey = (tuple(basicState + advancedState), action)
-    featureValue = 1
-    return [(featureKey, featureValue)]
+    retVal = []
+    RADIUS = 2
+    curType, curDir, curSinkCounter = game.getRowInfoFromPlayerCoords(y)
+    #advancedState = []
+    for row in range(max(0, y-2), min(game.height, y+2)):
+        type, dir, sinkCounter = game.getRowInfoFromPlayerCoords(row)
+        state = tuple([row - y] + [type] + [dir] + [1*(sinkCounter == SINK_WARN_TIME - 1)] + game.getRowFromPlayerCoords(row).getValues(x, RADIUS) + [curDir])
+        featureKey = (state, action)
+        featureValue = 1
+        retVal.append((featureKey, featureValue))
+        #advancedState = advancedState + game.getRow(row).getValues(x, RADIUS) + [game.getRowDir(row)] + [1*(game.getRowSinkCounter(row) == SINK_WARN_TIME - 1)]
+    
+    #featureKey = (tuple(advancedState), action)
+    #featureValue = 1
+    return retVal

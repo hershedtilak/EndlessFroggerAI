@@ -9,7 +9,7 @@ from global_vars import *
 import random
 from feature_extractors import *
 
-TRAIN_MODE = 0
+TRAIN_MODE = 1
 HUMAN_CONTROLLER = 0
 
 class game:
@@ -36,7 +36,8 @@ class game:
             self.controller = humanController()
         else:
             #self.controller = baselineController()
-            self.controller = QLearningController(0.8, testFeatureExtractor, self.controllerExplorationRate)
+            self.controller = QLearningController(0.8, moreInfoFeatureExtractor, self.controllerExplorationRate)
+        self.controller.loadWeights()
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         
         # initialize game
