@@ -136,8 +136,89 @@ class SARSAController(advancedFroggerController):
 class geneticAlgorithmController(advancedFroggerController):
     id = "geneticAlgorithmController"
 
-    def __init__(self):
-        raise NotImplementedError("Override me")
+    def __init__(self, sizeOfGenome, featureExtractor, mutationProb, mutationSTD):
+        self.actions = ["UP", "LEFT", "DOWN", "RIGHT", "STAY"]
+        self.featureExtractor = featureExtractor
+        self.mutationProb = mutationProb
+        self.mutationSTD = mutationSTD
+        self.sizeOfGenome = sizeOfGenome
+        self.weights = [defaultdict(float)] * sizeOfGenome
+        self.fitness = [] * sizeOfGenome
+        self.numIters = 0
+
+    # Return the Q function associated with the weights and features
+    def getQ(self, state, action, index):
+        score = 0
+        print(index)
+        for f, v in self.featureExtractor(state, action):
+            if f in self.weights[index]:
+                score += self.weights[index][f] * v
+        return score
         
-    def getAction(self, state):
-        raise NotImplementedError("Override me")
+    # Get an action - uses exploration probability
+    def getAction(self, state, index):
+        pygame.event.pump()
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.saveWeights()
+            return "QUIT"
+        self.numIters += 1
+
+        return max((self.getQ(state, action, index), action) for action in self.actions)[1]
+
+    def getStepSize(self):
+        #return 1.0 / math.sqrt(self.numIters)
+        return 0.1
+
+    def reproduce(self):
+
+        #first sort the weight vectors by fitness
+        sortedWeightInds = [i[0] for i in sorted(enumerate(self.fitness), key=lambda x:x[1])]
+        sortedWeightInds.reverse()
+        allParentsSorted = [self.weights[sortedWeightInds[i]] for i in range(self.sizeOfGenome)]
+        #take the top sqrt(n) weights
+        topSqrtN = int(math.sqrt(self.sizeOfGenome))
+        topParents = allParentsSorted[0:topSqrtN]
+
+        #do all possible weighted linear combinations
+        for i in range(len(topParents)):
+            for j in range(i + 1, len(topParents)):
+                fitI = self.fitness[sortedWeightInds[i]]
+                fitJ = self.fitness[sortedWeightInds[j]]
+                totalFitness = fitI + fitJ
+                weightsI = topParents[i]
+                weightsJ = topParents[j]
+                print("WeightsI" , weightsI)
+                print("WeightsJ" , weightsJ)
+                children = []
+                weightedCombo = {}
+                for key in weightsI:
+                    if key in weightsJ:
+                        weightedCombo[key] = (fitI * weightsI[key] + fitJ * weightsJ[key]) / totalFitness
+                    else:
+                        weightedCombo[key] = fitI * weightsI[key] / totalFitness
+                for key in weightsJ:
+                    if key not in weightsI:
+                        weightedCombo[key] = fitJ * weightsJ[key] / totalFitness
+                print("Weighted Comobo")
+                print(weightedCombo)
+                randKey = random.choice(list(weightedCombo.keys()))
+                if self.mutationProb > random.random():
+                    weightedCombo[randKey] += random.gauss(0, self.mutationSTD)
+
+
+                children.append(weightedCombo)
+
+        extras = self.sizeOfGenome - len(children)
+        for i in range(extras):
+            children.append(allParentsSorted[i])
+        print(self.weights)
+        self.weights = children
+
+    def saveWeights(self): pass
+
+    def loadWeights(self): pass
+
+
+
+

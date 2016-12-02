@@ -11,18 +11,19 @@ from feature_extractors import *
 
 TRAIN_MODE = 1
 EXPLORATION_RATE = TRAIN_MODE * 0.4
-CONTROLLER = QLEARNING_CONTROLLER
+CONTROLLER = GENETIC_CONTROLLER
 FEATURE_EXTRACTOR = moreInfoFeatureExtractor
 
 class game:
 
-    def __init__(self, width, height, controller):
+    def __init__(self, width, height, controller, weightIndex=None):
         self.justDied = False
         self.forceUpdate = False
         self.updateInterval = 100
         self.controllerUpdateInterval = 10
         self.rowInterval = 15
         self.loopInterval = 10.0 / 1000.0
+        self.weightIndex = weightIndex
         if TRAIN_MODE:
             self.updateInterval = 10
             self.controllerUpdateInterval = 1
@@ -150,7 +151,7 @@ class game:
         while self.running:
 
             # improve responsiveness of human controller
-            if HUMAN_CONTROLLER:
+            if CONTROLLER is HUMAN_CONTROLLER:
                 self.controller.updateAction()
         
             if numCycles % self.controllerUpdateInterval == 0 or self.justDied == True:
@@ -162,13 +163,21 @@ class game:
                         self.controller.incorporateFeedback(oldState, action, reward, newState)
                     self.justDied = False
                     oldState = self.getState()
-                action = self.controller.getAction(oldState)
+
+                if CONTROLLER is GENETIC_CONTROLLER:
+                    action = self.controller.getAction(oldState, self.weightIndex)
+                else:
+                    action = self.controller.getAction(oldState)
+
                 self.performAction(action)
             
             # update board
             self.updateBoard()
   
             if self.playerIsDead():
+                if CONTROLLER is GENETIC_CONTROLLER:
+                    self.running = False
+                    return self.score
                 self.justDied = True
                 self.startNewGame()
             else:
@@ -199,8 +208,25 @@ class game:
             time.sleep (self.loopInterval);
 
 if CONTROLLER == GENETIC_CONTROLLER:
-    controller = geneticAlgorithmController()     
+    n = 4
+    mutationProb = 0.1
+    mutationSTD = 2
+    controller = geneticAlgorithmController(n, FEATURE_EXTRACTOR, mutationProb, mutationSTD)
     # Greg's stuff
+    #instantiate n games
+    #after all games done update the weights  
+    numIters = 2
+    iters = 0
+    while(iters < numIters):
+        for index in range(n):
+            g = game(20,30, controller, index)
+            controller.fitness.append(g.run())
+        if TRAIN_MODE:
+            controller.reproduce()
+        iters += 1
+
+
+
 else:          
     if CONTROLLER == HUMAN_CONTROLLER:
         controller = humanController()
