@@ -11,12 +11,12 @@ from feature_extractors import *
 
 TRAIN_MODE = 1
 EXPLORATION_RATE = TRAIN_MODE * 0.4
-CONTROLLER = GENETIC_CONTROLLER
-FEATURE_EXTRACTOR = moreInfoFeatureExtractor
+CONTROLLER = QLEARNING_CONTROLLER
+FEATURE_EXTRACTOR = testFeatureExtractor
 
 class game:
 
-    def __init__(self, width, height, controller, weightIndex=None):
+    def __init__(self, width, height, controller, weightIndex = None):
         self.justDied = False
         self.forceUpdate = False
         self.updateInterval = 100
@@ -35,7 +35,7 @@ class game:
         self.player = Frog(int(width/2), int(height-1))
         self.controller = controller
         self.controller.loadWeights()
-        self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
+        self.rowOptions = 2*["SAFE"] + 0*["ROAD"] + ["RIVER"]
         
         # initialize game
         self.startNewGame()
@@ -143,6 +143,16 @@ class game:
         elif action == "QUIT":
             self.running = False
     
+    def getReward(self, action):
+        reward = 5 * (action == "UP")
+        reward -= 6 * (action == "DOWN")
+        type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(self.player.y - 1)
+        if type == "RIVER":
+            row = self.getRowFromPlayerCoords(self.player.y - 1)
+            dist = row.getDistToClosestLog(self.player.x)
+            reward -= 3*dist
+        return reward
+    
     def run(self):
         newState = self.getState()
         totalScore = 0
@@ -157,10 +167,9 @@ class game:
             if numCycles % self.controllerUpdateInterval == 0 or self.justDied == True:
                 oldState = newState
                 if self.justDied == True:
-                    reward = -200
                     newState = None
                     if TRAIN_MODE:
-                        self.controller.incorporateFeedback(oldState, action, reward, newState)
+                        self.controller.incorporateFeedback(oldState, action, DEATH_STATE_REWARD, newState)
                     self.justDied = False
                     oldState = self.getState()
 
@@ -187,12 +196,9 @@ class game:
             # draw board
             self.drawGame()
             
-            reward = 0
-            if action == "UP":
-                reward = 5
-            elif action == "LEFT" or action == "RIGHT" or action == "STAY":
-                reward = 2
-            newState = self.getState()   
+            # get new state and reward
+            newState = self.getState() 
+            reward = self.getReward(action)
             if TRAIN_MODE:
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             

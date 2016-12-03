@@ -51,6 +51,26 @@ class Row:
     def getType(self):
         return self.type
      
+    def getDistToClosestLog(self, x):
+        offset = 0
+        while self.rowQ[min(x + offset, self.len - 1)] == 1 and self.rowQ[max(0, x - offset)] == 1:
+            offset += 1
+            if offset == self.len:
+                return -1
+        return offset
+     
+    def getDirOfClosestLog(self, x):
+        offset = 0
+        while self.rowQ[min(x + offset, self.len - 1)] == 1 and self.rowQ[max(0, x - offset)] == 1:
+            offset += 1
+            if offset == self.len:
+                return self.len
+        if offset == 0:
+            return DIR_UP
+        if self.rowQ[min(x + offset, self.len - 1)] != 1:
+            return DIR_RIGHT
+        return DIR_LEFT
+     
     def clearRow(self):
         for i in range(0, self.len):
             self.rowQ[i] = 0

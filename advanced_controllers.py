@@ -60,7 +60,7 @@ class QLearningController(advancedFroggerController):
             return max((self.getQ(state, action), action) for action in self.actions)[1]
 
     def getStepSize(self):
-        return 1.0 / math.sqrt(self.numIters)
+        #return 1.0 / math.sqrt(self.numIters)
         return 0.1
 
     # Update weights
@@ -168,7 +168,7 @@ class geneticAlgorithmController(advancedFroggerController):
 
     def getStepSize(self):
         #return 1.0 / math.sqrt(self.numIters)
-        return 0.1
+        return 0.05
 
     def reproduce(self):
 

@@ -52,7 +52,7 @@ class baselineController(froggerController):
             
             if up != TAKEN:
                 return "UP"
-            return "STAY"   
+
             randDir = []    
             if left != TAKEN:
                 randDir.append("LEFT")
