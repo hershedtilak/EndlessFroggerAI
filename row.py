@@ -56,7 +56,7 @@ class Row:
         while self.rowQ[min(x + offset, self.len - 1)] == 1 and self.rowQ[max(0, x - offset)] == 1:
             offset += 1
             if offset == self.len:
-                return -1
+                return self.len
         return offset
      
     def getDirOfClosestLog(self, x):
@@ -64,7 +64,7 @@ class Row:
         while self.rowQ[min(x + offset, self.len - 1)] == 1 and self.rowQ[max(0, x - offset)] == 1:
             offset += 1
             if offset == self.len:
-                return self.len
+                return -1
         if offset == 0:
             return DIR_UP
         if self.rowQ[min(x + offset, self.len - 1)] != 1:

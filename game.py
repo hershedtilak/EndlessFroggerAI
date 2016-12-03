@@ -150,7 +150,7 @@ class game:
         if type == "RIVER":
             row = self.getRowFromPlayerCoords(self.player.y - 1)
             dist = row.getDistToClosestLog(self.player.x)
-            reward -= 3*dist
+            reward -= 2*dist
         return reward
     
     def run(self):
