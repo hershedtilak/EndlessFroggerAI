@@ -12,14 +12,11 @@ def testFeatureExtractor(state, action):
         return [(-10, 1)]
 
     newState = [1 * (x == 0) for x in basicState[0:4]]
-    type, dir, sinkCounter = game.getRowInfoFromPlayerCoords(game.player.y-1)
+    type, dir, sinkCounter = game.getRowInfoFromPlayerCoords(y-1)
     if type == "RIVER":
         row = game.getRowFromPlayerCoords(game.player.y-1)
         relLogDir = row.getDirOfClosestLog(game.player.x)
         newState.append(relLogDir)
-        newState.append(dir)
-        type, dir, sinkCounter = game.getRowInfoFromPlayerCoords(game.player.y)
-        newState.append(1*(type == "SAFE"))
         
     return [((tuple(newState), action), 1)]
 

@@ -9,7 +9,7 @@ from global_vars import *
 import random
 from feature_extractors import *
 
-TRAIN_MODE = 1
+TRAIN_MODE = 0
 EXPLORATION_RATE = TRAIN_MODE * 0.4
 CONTROLLER = QLEARNING_CONTROLLER
 FEATURE_EXTRACTOR = testFeatureExtractor
@@ -25,10 +25,10 @@ class game:
         self.loopInterval = 10.0 / 1000.0
         self.weightIndex = weightIndex
         if TRAIN_MODE:
-            self.updateInterval = 10
-            self.controllerUpdateInterval = 1
-            self.rowInterval = 1
-            self.loopInterval = 2.0 / 1000.0
+            self.updateInterval = 20
+            self.controllerUpdateInterval = 2
+            self.rowInterval = 2
+            self.loopInterval = 1.0 / 1000.0
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
@@ -144,33 +144,34 @@ class game:
             self.running = False
     
     def getReward(self, action):
-        reward = 5 * (action == "UP")
-        reward -= 6 * (action == "DOWN")
+        reward = 2 * (action == "UP")
+        reward -= 3 * (action == "DOWN")
         type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(self.player.y - 1)
         if type == "RIVER":
             row = self.getRowFromPlayerCoords(self.player.y - 1)
             dist = row.getDistToClosestLog(self.player.x)
-            reward -= 2*dist
+            reward += int(0.25*(self.width - dist))
         return reward
     
     def run(self):
         newState = self.getState()
         totalScore = 0
-        numCycles = 0
+        numCycles = 1
         save = 1
         while self.running:
 
             # improve responsiveness of human controller
             if CONTROLLER is HUMAN_CONTROLLER:
                 self.controller.updateAction()
-        
-            if numCycles % self.controllerUpdateInterval == 0 or self.justDied == True:
+                
+            if (numCycles % self.controllerUpdateInterval == 1) or (self.justDied == True):
                 oldState = newState
                 if self.justDied == True:
                     newState = None
                     if TRAIN_MODE:
                         self.controller.incorporateFeedback(oldState, action, DEATH_STATE_REWARD, newState)
                     self.justDied = False
+                    self.startNewGame()
                     oldState = self.getState()
 
                 if CONTROLLER is GENETIC_CONTROLLER:
@@ -188,7 +189,6 @@ class game:
                     self.running = False
                     return self.score
                 self.justDied = True
-                self.startNewGame()
             else:
                 if numCycles % (1.0 / self.loopInterval) == 0:
                     self.score += 1
@@ -199,7 +199,7 @@ class game:
             # get new state and reward
             newState = self.getState() 
             reward = self.getReward(action)
-            if TRAIN_MODE:
+            if TRAIN_MODE and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied)):
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:
