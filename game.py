@@ -1,5 +1,6 @@
 import pygame
 from collections import deque
+import copy
 from row import Row
 from frog import Frog
 from base_controllers import *
@@ -28,14 +29,14 @@ class game:
             self.updateInterval = 20
             self.controllerUpdateInterval = 2
             self.rowInterval = 2
-            self.loopInterval = 1.0 / 1000.0
+            self.loopInterval = 1.0 / 3000.0
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
         self.player = Frog(int(width/2), int(height-1))
         self.controller = controller
         self.controller.loadWeights()
-        self.rowOptions = 2*["SAFE"] + 0*["ROAD"] + ["RIVER"]
+        self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
         
         # initialize game
         self.startNewGame()
@@ -109,11 +110,11 @@ class game:
         val = self.getBoardValue(x, y)
         return (val != TAKEN and val != -1)
     
-    def getRowFromPlayerCoords(self, y):
-        return self.board[self.height - 1 - y]
+    def getRowFromPlayerCoords(self, y, board):
+        return board[self.height - 1 - y]
     
-    def getRowInfoFromPlayerCoords(self, y):
-        row = self.getRowFromPlayerCoords(y)
+    def getRowInfoFromPlayerCoords(self, y, board):
+        row = self.getRowFromPlayerCoords(y, board)
         return [row.getType(), row.getDir(), row.getSinkCounter()]
             
     def playerIsDead(self):
@@ -127,7 +128,7 @@ class game:
         x = self.player.x
         y = self.player.y
         basicState = [self.getBoardValue(x, y-1), self.getBoardValue(x-1, y), self.getBoardValue(x, y+1), self.getBoardValue(x+1, y), self.getBoardValue(x, y)]
-        return tuple((basicState, x, y, self.justDied, self))
+        return tuple((basicState, x, y, self.justDied, self, copy.deepcopy(self.board)))
     
     def performAction(self, action):
         if action == "LEFT" and self.player.x > 0:
@@ -144,13 +145,16 @@ class game:
             self.running = False
     
     def getReward(self, action):
-        reward = 2 * (action == "UP")
-        reward -= 3 * (action == "DOWN")
-        type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(self.player.y - 1)
+        reward = 8 * (action == "UP")
+        reward -= 9 * (action == "DOWN")
+        type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(self.player.y - 1, self.board)
         if type == "RIVER":
-            row = self.getRowFromPlayerCoords(self.player.y - 1)
+            row = self.getRowFromPlayerCoords(self.player.y - 1, self.board)
             dist = row.getDistToClosestLog(self.player.x)
             reward += int(0.25*(self.width - dist))
+        type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(min(self.height - 1, self.player.y + 1), self.board)
+        if type == "RIVER":
+            reward += 10
         return reward
     
     def run(self):
@@ -194,12 +198,13 @@ class game:
                     self.score += 1
             
             # draw board
-            self.drawGame()
+            if not TRAIN_MODE:
+                self.drawGame()
             
             # get new state and reward
             newState = self.getState() 
             reward = self.getReward(action)
-            if TRAIN_MODE and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied)):
+            if TRAIN_MODE and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied == True)):
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:
@@ -210,7 +215,10 @@ class game:
                 save = 1
             
             numCycles += 1
-            pygame.display.flip()
+            
+            if not TRAIN_MODE:
+                pygame.display.flip()
+            
             time.sleep (self.loopInterval);
 
 if CONTROLLER == GENETIC_CONTROLLER:

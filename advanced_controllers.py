@@ -61,7 +61,7 @@ class QLearningController(advancedFroggerController):
 
     def getStepSize(self):
         #return 1.0 / math.sqrt(self.numIters)
-        return 0.05
+        return 0.1
 
     # Update weights
     def incorporateFeedback(self, state, action, reward, newState):
