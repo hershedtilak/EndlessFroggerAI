@@ -7,6 +7,7 @@ class froggerController:
     def incorporateFeedback(self, state, action, reward, newState): pass
     def loadWeights(self): pass
     def saveWeights(self): pass
+    def setExplorationRate(self, prob): self.explorationProb = prob
 
 class humanController(froggerController):
     id = "humanController"

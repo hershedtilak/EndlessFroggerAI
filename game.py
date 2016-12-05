@@ -10,8 +10,12 @@ from global_vars import *
 import random
 from feature_extractors import *
 
-TRAIN_MODE = 0
-EXPLORATION_RATE = TRAIN_MODE * 0.4
+GATHER_CYCLE = 200
+GATHER_AVG = 10
+
+GATHER_STATS = 1
+TRAIN_MODE = 1
+EXPLORATION_RATE = 0.4
 CONTROLLER = QLEARNING_CONTROLLER
 FEATURE_EXTRACTOR = testFeatureExtractor
 
@@ -20,16 +24,9 @@ class game:
     def __init__(self, width, height, controller, weightIndex = None):
         self.justDied = False
         self.forceUpdate = False
-        self.updateInterval = 100
-        self.controllerUpdateInterval = 10
-        self.rowInterval = 15
-        self.loopInterval = 10.0 / 1000.0
         self.weightIndex = weightIndex
-        if TRAIN_MODE:
-            self.updateInterval = 20
-            self.controllerUpdateInterval = 2
-            self.rowInterval = 2
-            self.loopInterval = 1.0 / 3000.0
+        self.localTrainMode = TRAIN_MODE or GATHER_STATS # start in train mode if GATHER_STATS
+        self.setUpdateIntervals(self.localTrainMode)
         self.width = width
         self.height = height
         self.boardHeight = int(1.5 * height) # buffers 50% of board
@@ -68,7 +65,18 @@ class game:
                 type = random.choice(self.rowOptions)
             self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), type))
 
-        
+    def setUpdateIntervals(self, trainMode):
+        if trainMode:
+            self.updateInterval = 20
+            self.controllerUpdateInterval = 2
+            self.rowInterval = 2
+            self.loopInterval = 1.0 / 3000.0
+        else:
+            self.updateInterval = 100
+            self.controllerUpdateInterval = 10
+            self.rowInterval = 15
+            self.loopInterval = 10.0 / 1000.0
+    
     def drawScores(self):
         score_string = "Score: " + str(self.score)
         scoretext = self.score_font.render(score_string, 1, (0,0,0))
@@ -93,7 +101,7 @@ class game:
             type = random.randint(0,len(self.rowOptions)-1)
             self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
             self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
-        if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 10)))) and self.forceUpdate == False:
+        if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 100)))) and self.forceUpdate == False:
             self.count = self.count + 1
             return
         self.board.append(self.buffer.popleft())
@@ -154,14 +162,16 @@ class game:
             reward += int(0.25*(self.width - dist))
         type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(min(self.height - 1, self.player.y + 1), self.board)
         if type == "RIVER":
-            reward += 10
+            reward += 5
         return reward
     
     def run(self):
         newState = self.getState()
         totalScore = 0
+        numTrials = -1
         numCycles = 1
         save = 1
+        printedScore = False
         while self.running:
 
             # improve responsiveness of human controller
@@ -172,7 +182,7 @@ class game:
                 oldState = newState
                 if self.justDied == True:
                     newState = None
-                    if TRAIN_MODE:
+                    if self.localTrainMode:
                         self.controller.incorporateFeedback(oldState, action, DEATH_STATE_REWARD, newState)
                     self.justDied = False
                     self.startNewGame()
@@ -193,18 +203,37 @@ class game:
                     self.running = False
                     return self.score
                 self.justDied = True
+                
+                # start generating statistics if GATHER_STATS
+                numTrials += 1
+                totalScore += self.score   
+                if GATHER_STATS and numTrials % GATHER_CYCLE == 0:
+                    totalScore = 0
+                    print("Trained for " + str(numTrials) + " trials")
+                    self.localTrainMode = False
+                    self.setUpdateIntervals(self.localTrainMode)
+                    self.controller.setExplorationRate(0)
+                    printedScore = False
+                if GATHER_STATS and numTrials % GATHER_CYCLE == GATHER_AVG and printedScore == False:
+                    print("Avg Score for " + str(GATHER_AVG) + " trials: " + str(1.0 * totalScore / GATHER_AVG))
+                    numTrials -= GATHER_AVG
+                    self.localTrainMode = True
+                    self.setUpdateIntervals(self.localTrainMode)
+                    self.controller.setExplorationRate(EXPLORATION_RATE)
+                    printedScore = True    
+                # end generating statistics
             else:
-                if numCycles % (1.0 / self.loopInterval) == 0:
+                if numCycles % (0.1 / self.loopInterval) == 0:
                     self.score += 1
             
             # draw board
-            if not TRAIN_MODE:
+            if not self.localTrainMode:
                 self.drawGame()
             
             # get new state and reward
             newState = self.getState() 
             reward = self.getReward(action)
-            if TRAIN_MODE and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied == True)):
+            if self.localTrainMode and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied == True)):
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             
             if numCycles % 10000 == 1:
@@ -216,7 +245,7 @@ class game:
             
             numCycles += 1
             
-            if not TRAIN_MODE:
+            if not self.localTrainMode:
                 pygame.display.flip()
             
             time.sleep (self.loopInterval);
@@ -247,8 +276,8 @@ else:
     elif CONTROLLER == BASELINE_CONTROLLER:
         controller = baselineController()
     elif CONTROLLER == QLEARNING_CONTROLLER:
-        controller = QLearningController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE)  
+        controller = QLearningController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE * TRAIN_MODE)  
     elif CONTROLLER == SARSA_CONTROLLER:
-        controller = SARSAController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE)  
+        controller = SARSAController(0.8, FEATURE_EXTRACTOR, EXPLORATION_RATE * TRAIN_MODE)  
     g = game(20,30, controller)
     g.run()
