@@ -59,14 +59,14 @@ class game:
         self.board = deque([], self.boardHeight)
         self.buffer = deque([])
 
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
         for i in range(4, self.boardHeight):
             if i % 2 == 0:
                 type = random.choice(self.rowOptions)
-            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), type))
+            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), type))
 
         
     def drawScores(self):
@@ -91,9 +91,9 @@ class game:
         # handle board scrolling
         if not self.buffer:
             type = random.randint(0,len(self.rowOptions)-1)
-            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
-            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
-        if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 10)))) and self.forceUpdate == False:
+            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), self.rowOptions[type]))
+            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), self.rowOptions[type]))
+        if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 100)))) and self.forceUpdate == False:
             self.count = self.count + 1
             return
         self.board.append(self.buffer.popleft())
@@ -159,8 +159,9 @@ class game:
     
     def run(self):
         newState = self.getState()
-        totalScore = 0
         numCycles = 1
+        numDeaths = 0
+        totalScore = 0
         save = 1
         while self.running:
 
@@ -189,12 +190,18 @@ class game:
             self.updateBoard()
   
             if self.playerIsDead():
-                if CONTROLLER is GENETIC_CONTROLLER:
+                if CONTROLLER is GENETIC_CONTROLLER or numDeaths == 100:
                     self.running = False
+                    self.controller.saveWeights()
                     return self.score
                 self.justDied = True
+                totalScore += self.score
+                numDeaths += 1
+                if numDeaths == 10:
+                    print(1.0 * totalScore / numDeaths)
+                    return self.score
             else:
-                if numCycles % (1.0 / self.loopInterval) == 0:
+                if numCycles % (0.1 / self.loopInterval) == 0:
                     self.score += 1
             
             # draw board
