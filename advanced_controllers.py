@@ -60,8 +60,8 @@ class QLearningController(advancedFroggerController):
             return max((self.getQ(state, action), action) for action in self.actions)[1]
 
     def getStepSize(self):
-        return 1.0 / math.sqrt(self.numIters)
-        #return 0.1
+        #return 1.0 / math.sqrt(self.numIters)
+        return 0.1
 
     # Update weights
     def incorporateFeedback(self, state, action, reward, newState):
@@ -115,8 +115,8 @@ class SARSAController(advancedFroggerController):
             return max((self.getQ(state, action), action) for action in self.actions)[1]
 
     def getStepSize(self):
-        return 1.0 / math.sqrt(self.numIters)
-        #return 0.1
+        #return 1.0 / math.sqrt(self.numIters)
+        return 0.1
 
     # Update weights
     def incorporateFeedback(self, state, action, reward, newState):

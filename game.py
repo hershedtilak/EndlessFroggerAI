@@ -10,14 +10,14 @@ from global_vars import *
 import random
 from feature_extractors import *
 
-GATHER_CYCLE = 200
-GATHER_AVG = 10
+GATHER_CYCLE = 1000
+GATHER_AVG = 15
 
 GATHER_STATS = 1
 TRAIN_MODE = 1
 EXPLORATION_RATE = 0.4
 CONTROLLER = QLEARNING_CONTROLLER
-FEATURE_EXTRACTOR = testFeatureExtractor
+FEATURE_EXTRACTOR = betterThanBaselineFeatureExtractor
 
 class game:
 
@@ -34,6 +34,11 @@ class game:
         self.controller = controller
         self.controller.loadWeights()
         self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
+        
+        # open logging file
+        if GATHER_STATS:
+            self.logfile = open('log.txt', 'w')
+            self.logfile.write("TRAINING DATA FOR " + self.controller.id.upper() + " USING " + FEATURE_EXTRACTOR.__name__.upper() + "\n")
         
         # initialize game
         self.startNewGame()
@@ -56,14 +61,14 @@ class game:
         self.board = deque([], self.boardHeight)
         self.buffer = deque([])
 
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
-        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
+        self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval)))
         for i in range(4, self.boardHeight):
             if i % 2 == 0:
                 type = random.choice(self.rowOptions)
-            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), type))
+            self.board.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), type))
 
     def setUpdateIntervals(self, trainMode):
         if trainMode:
@@ -99,8 +104,8 @@ class game:
         # handle board scrolling
         if not self.buffer:
             type = random.randint(0,len(self.rowOptions)-1)
-            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
-            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 10)), self.rowInterval), self.rowOptions[type]))
+            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), self.rowOptions[type]))
+            self.buffer.append(Row(self.width, random.randint(max(1, self.rowInterval - int(self.score / 100)), self.rowInterval), self.rowOptions[type]))
         if self.count <= max(self.rowInterval, (self.updateInterval / max(1, (self.score / 100)))) and self.forceUpdate == False:
             self.count = self.count + 1
             return
@@ -153,7 +158,7 @@ class game:
             self.running = False
     
     def getReward(self, action):
-        reward = 8 * (action == "UP")
+        reward = 7 * (action == "UP")
         reward -= 9 * (action == "DOWN")
         type, dir, sinkCounter = self.getRowInfoFromPlayerCoords(self.player.y - 1, self.board)
         if type == "RIVER":
@@ -203,25 +208,6 @@ class game:
                     self.running = False
                     return self.score
                 self.justDied = True
-                
-                # start generating statistics if GATHER_STATS
-                numTrials += 1
-                totalScore += self.score   
-                if GATHER_STATS and numTrials % GATHER_CYCLE == 0:
-                    totalScore = 0
-                    print("Trained for " + str(numTrials) + " trials")
-                    self.localTrainMode = False
-                    self.setUpdateIntervals(self.localTrainMode)
-                    self.controller.setExplorationRate(0)
-                    printedScore = False
-                if GATHER_STATS and numTrials % GATHER_CYCLE == GATHER_AVG and printedScore == False:
-                    print("Avg Score for " + str(GATHER_AVG) + " trials: " + str(1.0 * totalScore / GATHER_AVG))
-                    numTrials -= GATHER_AVG
-                    self.localTrainMode = True
-                    self.setUpdateIntervals(self.localTrainMode)
-                    self.controller.setExplorationRate(EXPLORATION_RATE)
-                    printedScore = True    
-                # end generating statistics
             else:
                 if numCycles % (0.1 / self.loopInterval) == 0:
                     self.score += 1
@@ -236,6 +222,29 @@ class game:
             if self.localTrainMode and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied == True)):
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
             
+            if self.justDied and GATHER_STATS:
+                # start generating statistics if GATHER_STATS
+                numTrials += 1
+                totalScore += self.score   
+                if numTrials % GATHER_CYCLE == 0:
+                    totalScore = 0
+                    self.logfile.write("Trained for " + str(numTrials) + " trials\n")
+                    self.logfile.flush()
+                    self.localTrainMode = False
+                    self.setUpdateIntervals(self.localTrainMode)
+                    self.controller.setExplorationRate(0)
+                    printedScore = False
+                if numTrials % GATHER_CYCLE == GATHER_AVG and printedScore == False:
+                    self.logfile.write("Avg Score for " + str(GATHER_AVG) + " trials: " + str(1.0 * totalScore / GATHER_AVG) + "\n")
+                    self.logfile.flush()
+                    numTrials -= GATHER_AVG
+                    self.localTrainMode = True
+                    self.setUpdateIntervals(self.localTrainMode)
+                    self.controller.setExplorationRate(EXPLORATION_RATE)
+                    printedScore = True    
+                # end generating statistics
+            
+            
             if numCycles % 10000 == 1:
                 if save == 1:
                     self.controller.saveWeights()
@@ -249,6 +258,9 @@ class game:
                 pygame.display.flip()
             
             time.sleep (self.loopInterval);
+            
+        if GATHER_STATS:
+            self.logfile.close()
 
 if CONTROLLER == GENETIC_CONTROLLER:
     n = 4

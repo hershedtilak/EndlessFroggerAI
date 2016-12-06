@@ -1,0 +1,7 @@
+TRAINING DATA FOR QLEARNINGCONTROLLER USING BETTERTHANBASELINEFEATUREEXTRACTOR
+Trained for 0 trials
+Avg Score for 15 trials: 20.6
+Trained for 1000 trials
+Avg Score for 15 trials: 52.06666666666667
+Trained for 2000 trials
+Avg Score for 15 trials: 67.4
