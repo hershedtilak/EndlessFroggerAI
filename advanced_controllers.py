@@ -149,7 +149,6 @@ class geneticAlgorithmController(advancedFroggerController):
     # Return the Q function associated with the weights and features
     def getQ(self, state, action, index):
         score = 0
-        print(index)
         for f, v in self.featureExtractor(state, action):
             if f in self.weights[index]:
                 score += self.weights[index][f] * v
@@ -168,7 +167,7 @@ class geneticAlgorithmController(advancedFroggerController):
 
     def getStepSize(self):
         #return 1.0 / math.sqrt(self.numIters)
-        return 0.05
+        return 0.1
 
     def reproduce(self):
 
@@ -215,9 +214,22 @@ class geneticAlgorithmController(advancedFroggerController):
         print(self.weights)
         self.weights = children
 
-    def saveWeights(self): pass
+    def saveWeights(self):
+        for k in range(0, sizeOfGenome):
+            file_name = 'weights/weights' + str(k) + '_geneticAlgorithmController_' + self.featureExtractor.__name__ + '.txt'
+            with open(file_name, "w") as f:
+                for i in self.weights[k].keys():
+                    f.write(str(i) + ":" + str(self.weights[k][i]) + "\n")
 
-    def loadWeights(self): pass
+    def loadWeights(self):
+        for k in range(0, sizeOfGenome):
+            file_name = 'weights/weights' + str(k) + '_geneticAlgorithmController_' + self.featureExtractor.__name__ + '.txt'
+            if os.path.isfile(file_name):
+                with open(file_name, "r") as f:
+                    for line in f:
+                        strKey, val = line.split(":")
+                        key = eval(strKey)
+                        self.weights[k][key] = float(val)
 
 
 

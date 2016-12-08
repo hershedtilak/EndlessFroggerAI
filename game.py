@@ -16,7 +16,7 @@ GATHER_AVG = 15
 GATHER_STATS = 1
 TRAIN_MODE = 1
 EXPLORATION_RATE = 0.4
-CONTROLLER = QLEARNING_CONTROLLER
+CONTROLLER = SARSA_CONTROLLER
 FEATURE_EXTRACTOR = betterThanBaselineFeatureExtractor
 
 class game:
@@ -173,7 +173,7 @@ class game:
     def run(self):
         newState = self.getState()
         totalScore = 0
-        numTrials = -1
+        numTrials = 27000
         numCycles = 1
         save = 1
         printedScore = False
@@ -272,14 +272,20 @@ if CONTROLLER == GENETIC_CONTROLLER:
     #after all games done update the weights  
     numIters = 2
     iters = 0
+    
+    geneticLog = open('log.txt', 'w')
+    geneticLog.write("TRAINING DATA FOR GENETIC ALGORITHM USING " + FEATURE_EXTRACTOR.__name__.upper() + "\n")
+    
     while(iters < numIters):
         for index in range(n):
             g = game(20,30, controller, index)
             controller.fitness.append(g.run())
-        if TRAIN_MODE:
+            geneticLog.write("SCORE OF MOST FIT GENE: " + str(max(controller.fitness)))
+            geneticLog.flush()
             controller.reproduce()
         iters += 1
-
+    
+    geneticLog.close()
 
 
 else:          
