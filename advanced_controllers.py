@@ -132,7 +132,6 @@ class SARSAController(advancedFroggerController):
         for f, v in self.featureExtractor(state, action):
             self.weights[f] -= scaleFactor*v
  
-# FOR GREG
 class geneticAlgorithmController(advancedFroggerController):
     id = "geneticAlgorithmController"
 
@@ -143,7 +142,7 @@ class geneticAlgorithmController(advancedFroggerController):
         self.mutationSTD = mutationSTD
         self.sizeOfGenome = sizeOfGenome
         self.weights = [defaultdict(float)] * sizeOfGenome
-        self.fitness = [] * sizeOfGenome
+        self.fitness = [0] * sizeOfGenome
         self.numIters = 0
 
     # Return the Q function associated with the weights and features
@@ -154,7 +153,6 @@ class geneticAlgorithmController(advancedFroggerController):
                 score += self.weights[index][f] * v
         return score
         
-    # Get an action - uses exploration probability
     def getAction(self, state, index):
         pygame.event.pump()
         keys = pygame.key.get_pressed()
@@ -163,10 +161,11 @@ class geneticAlgorithmController(advancedFroggerController):
             return "QUIT"
         self.numIters += 1
 
-        return max((self.getQ(state, action, index), action) for action in self.actions)[1]
+        actionList = [(self.getQ(state, action, index), action) for action in self.actions]
+        bestActions = [action[1] for action in actionList if action[0] == max(actionList)[0]]
+        return random.choice(bestActions)
 
     def getStepSize(self):
-        #return 1.0 / math.sqrt(self.numIters)
         return 0.1
 
     def reproduce(self):
@@ -187,8 +186,6 @@ class geneticAlgorithmController(advancedFroggerController):
                 totalFitness = fitI + fitJ
                 weightsI = topParents[i]
                 weightsJ = topParents[j]
-                print("WeightsI" , weightsI)
-                print("WeightsJ" , weightsJ)
                 children = []
                 weightedCombo = {}
                 for key in weightsI:
@@ -199,30 +196,28 @@ class geneticAlgorithmController(advancedFroggerController):
                 for key in weightsJ:
                     if key not in weightsI:
                         weightedCombo[key] = fitJ * weightsJ[key] / totalFitness
-                print("Weighted Comobo")
-                print(weightedCombo)
                 randKey = random.choice(list(weightedCombo.keys()))
-                if self.mutationProb > random.random():
+                if random.random() < self.mutationProb:
                     weightedCombo[randKey] += random.gauss(0, self.mutationSTD)
-
-
                 children.append(weightedCombo)
 
         extras = self.sizeOfGenome - len(children)
         for i in range(extras):
             children.append(allParentsSorted[i])
-        print(self.weights)
         self.weights = children
 
-    def saveWeights(self):
-        for k in range(0, sizeOfGenome):
+    def saveWeights(self): pass
+    def loadWeights(self): pass
+        
+    def saveWeightsGenetic(self):
+        for k in range(0, self.sizeOfGenome):
             file_name = 'weights/weights' + str(k) + '_geneticAlgorithmController_' + self.featureExtractor.__name__ + '.txt'
             with open(file_name, "w") as f:
                 for i in self.weights[k].keys():
                     f.write(str(i) + ":" + str(self.weights[k][i]) + "\n")
 
-    def loadWeights(self):
-        for k in range(0, sizeOfGenome):
+    def loadWeightsGenetic(self):
+        for k in range(0, self.sizeOfGenome):
             file_name = 'weights/weights' + str(k) + '_geneticAlgorithmController_' + self.featureExtractor.__name__ + '.txt'
             if os.path.isfile(file_name):
                 with open(file_name, "r") as f:

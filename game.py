@@ -9,22 +9,22 @@ import time
 from global_vars import *
 import random
 from feature_extractors import *
+from multiprocessing import Pool
 
 GATHER_CYCLE = 1000
 GATHER_AVG = 15
 
-GATHER_STATS = 1
-TRAIN_MODE = 1
+GATHER_STATS = 0
+TRAIN_MODE = 0
 EXPLORATION_RATE = 0.4
-CONTROLLER = SARSA_CONTROLLER
-FEATURE_EXTRACTOR = betterThanBaselineFeatureExtractor
+CONTROLLER = GENETIC_CONTROLLER
+FEATURE_EXTRACTOR = geneticFeatureExtractor
 
 class game:
 
-    def __init__(self, width, height, controller, weightIndex = None):
+    def __init__(self, width, height, controller):
         self.justDied = False
         self.forceUpdate = False
-        self.weightIndex = weightIndex
         self.localTrainMode = TRAIN_MODE or GATHER_STATS # start in train mode if GATHER_STATS
         self.setUpdateIntervals(self.localTrainMode)
         self.width = width
@@ -33,7 +33,7 @@ class game:
         self.player = Frog(int(width/2), int(height-1))
         self.controller = controller
         self.controller.loadWeights()
-        self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + ["RIVER"]
+        self.rowOptions = 2*["SAFE"] + 10*["ROAD"] + 1*["RIVER"]
         
         # open logging file
         if GATHER_STATS:
@@ -42,11 +42,6 @@ class game:
         
         # initialize game
         self.startNewGame()
-        
-        # for drawing
-        self.surf = pygame.display.set_mode((self.width*BLOCK_SIZE, self.height*BLOCK_SIZE), pygame.HWSURFACE)
-        pygame.font.init()
-        self.score_font = pygame.font.SysFont("monospace", 20)
         
         # set game to running
         self.running = True
@@ -170,13 +165,20 @@ class game:
             reward += 5
         return reward
     
-    def run(self):
+    def run(self, weightIndex=None):
         newState = self.getState()
         totalScore = 0
-        numTrials = 27000
+        numTrials = 0
         numCycles = 1
         save = 1
         printedScore = False
+        self.weightIndex = weightIndex
+        
+        # for drawing
+        self.surf = pygame.display.set_mode((self.width*BLOCK_SIZE, self.height*BLOCK_SIZE), pygame.HWSURFACE)
+        pygame.font.init()
+        self.score_font = pygame.font.SysFont("monospace", 20)
+        
         while self.running:
 
             # improve responsiveness of human controller
@@ -204,9 +206,6 @@ class game:
             self.updateBoard()
   
             if self.playerIsDead():
-                if CONTROLLER is GENETIC_CONTROLLER:
-                    self.running = False
-                    return self.score
                 self.justDied = True
             else:
                 if numCycles % (0.1 / self.loopInterval) == 0:
@@ -221,6 +220,15 @@ class game:
             reward = self.getReward(action)
             if self.localTrainMode and ((numCycles % self.controllerUpdateInterval == 0) or (self.justDied == True)):
                 self.controller.incorporateFeedback(oldState, action, reward, newState)
+            
+            # poor logging for getting project results
+            if self.justDied and CONTROLLER == GENETIC_CONTROLLER:
+                totalScore += self.score   
+                numTrials += 1
+                if numTrials == 5:
+                    self.running = False
+                    pygame.quit()
+                    return (1.0 * totalScore / numTrials)
             
             if self.justDied and GATHER_STATS:
                 # start generating statistics if GATHER_STATS
@@ -263,30 +271,29 @@ class game:
             self.logfile.close()
 
 if CONTROLLER == GENETIC_CONTROLLER:
-    n = 4
-    mutationProb = 0.1
+    n = 10
+    mutationProb = 0.7
     mutationSTD = 2
     controller = geneticAlgorithmController(n, FEATURE_EXTRACTOR, mutationProb, mutationSTD)
-    # Greg's stuff
-    #instantiate n games
-    #after all games done update the weights  
-    numIters = 2
+    controller.loadWeightsGenetic()
+    numIters = 1000
     iters = 0
     
-    geneticLog = open('log.txt', 'w')
-    geneticLog.write("TRAINING DATA FOR GENETIC ALGORITHM USING " + FEATURE_EXTRACTOR.__name__.upper() + "\n")
-    
-    while(iters < numIters):
-        for index in range(n):
-            g = game(20,30, controller, index)
-            controller.fitness.append(g.run())
-            geneticLog.write("SCORE OF MOST FIT GENE: " + str(max(controller.fitness)))
-            geneticLog.flush()
-            controller.reproduce()
+    if __name__ == '__main__':
+        geneticLog = open('log.txt', 'w')
+        geneticLog.write("TRAINING DATA FOR GENETIC ALGORITHM USING " + FEATURE_EXTRACTOR.__name__.upper() + "\n")
+    while iters < numIters and __name__ == '__main__':
+        workerList = Pool(processes=n)
+        controller.fitness = workerList.map(game(20,30, controller).run, range(n))
+        geneticLog.write("Generation " + str(iters) + "\n")
+        geneticLog.write("SCORE OF MOST FIT GENE: " + str(max(controller.fitness)) + "\n")
+        geneticLog.flush()
+        controller.reproduce()
+        controller.saveWeightsGenetic()
         iters += 1
     
-    geneticLog.close()
-
+    if __name__ == '__main__':
+        geneticLog.close()
 
 else:          
     if CONTROLLER == HUMAN_CONTROLLER:

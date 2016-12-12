@@ -1,6 +1,22 @@
 from global_vars import *
 
 #test
+def geneticFeatureExtractor(state, action):
+    basicState = state[0]
+    x = state[1]
+    y = state[2]
+    justDied = state[3]
+    game = state[4]
+    board = state[5]
+
+    if(justDied):
+        return [(-10, 1)]
+
+    newState = [1 * (x == 0) for x in basicState[0:4]]
+    
+    return [((tuple(newState), action), 1)]
+
+#test
 def testFeatureExtractor(state, action):
     basicState = state[0]
     x = state[1]
